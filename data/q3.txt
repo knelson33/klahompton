@@ -1,0 +1,1 @@
+[out:json][timeout:60]; relation(id:6317836,17468210); out geom;
