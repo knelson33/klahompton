@@ -90,6 +90,11 @@ const pushFrom = (x, z) => { let best = null, bd = Infinity; const k = bkey(Math
 
 // ---------------------------------------------------------------- buildings
 const SIDEWALK = 3.5; // houses keep this far back from the (widened) road edge
+// houses that are always kept, whatever the thinning does (OSM building ids)
+const ALWAYS = new Set([
+  1212820905, // 3968 262nd Ave SE
+  1209932034, // 3965 262nd Ave SE, across the street from it
+]);
 const kindOf = t => t.building === 'school' || t.amenity === 'school' ? 'school' : ['retail', 'commercial', 'supermarket'].includes(t.building) || t.shop ? 'retail' : t.building === 'church' || t.amenity === 'place_of_worship' ? 'church'
   : ['garage', 'garages', 'shed', 'roof'].includes(t.building) ? 'small' : t.building === 'apartments' || t.building === 'residential' ? 'apartments' : 'house';
 const area = pts => { let a = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; a += p[0] * q[1] - q[0] * p[1]; } return Math.abs(a / 2); };
@@ -104,14 +109,14 @@ for (const e of osm) {
   let pts = e.geometry.slice(0, -1).map(P); const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length, cz = pts.reduce((s, p) => s + p[1], 0) / pts.length;
   if (!near(cx, cz, 120)) continue; // inside Klahanie, plus a ring of scenery around it
   stats.buildingsIn++; const k = kindOf(t), A = area(pts); if (A < 12) continue;
-  cand.push({ id: e.id, k, pts, cx, cz, A, name: t.name || '', levels: +(t['building:levels'] || 0) });
+  cand.push({ id: e.id, k, pts, cx, cz, A, name: t.name || '', levels: +(t['building:levels'] || 0), always: ALWAYS.has(e.id) });
 }
-cand.sort((a, b) => (b.k !== 'house') - (a.k !== 'house') || b.A - a.A); // landmarks and big buildings first
+cand.sort((a, b) => b.always - a.always || (b.k !== 'house') - (a.k !== 'house') || b.A - a.A); // must-keeps, then landmarks and big buildings first
 const placed = [];
 for (const b of cand) {
   const special = b.k !== 'house' && b.k !== 'small';
   // thin the ordinary houses to about one in two, and sheds/garages further
-  if (!special && hash(b.id) > (b.k === 'small' ? 0.25 : 0.55)) { stats.droppedThin++; continue; }
+  if (!special && !b.always && hash(b.id) > (b.k === 'small' ? 0.25 : 0.55)) { stats.droppedThin++; continue; }
   // keep clear of the widened road: push back up to 8 m, else drop
   let pts = b.pts, ok = pts.every(([x, z]) => clearOf(x, z, SIDEWALK)) && clearOf(b.cx, b.cz, SIDEWALK);
   if (!ok && !special) {
