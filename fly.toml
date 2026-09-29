@@ -1,0 +1,26 @@
+# Fly.io: the game server. Deploy with:  fly deploy --ha=false
+# (one machine only: every captain in a voyage must reach the same server, and one keeps the bill at ~$3/month)
+app = "klahompton"
+primary_region = "sjc" # San Jose: the closest open region to the San Juans (Fly's Seattle region takes no new servers)
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  GAME_PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"   # stay awake so players never wait for the server to start
+  auto_start_machines = true
+  min_machines_running = 1
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 200
+    hard_limit = 250
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

@@ -1,0 +1,184 @@
+<title>Klahompton</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Pirata+One&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#1a1410; --paper:#f6e7c1; --gold:#f2c14e; --red:#c8352b; --sea:#2b8fd6; color-scheme:light; }
+  html, body { margin:0; height:100%; overflow:hidden; background:#9fd4f5; }
+  body { font-family:'Comic Neue', 'Comic Sans MS', system-ui, sans-serif; color:var(--ink); }
+  canvas#view { display:block; width:100%; height:100%; touch-action:none; }
+  /* top bar: logo (+ crew messages under it) · compass · speed & gold */
+  #top { position:fixed; left:16px; right:16px; top:calc(14px + env(safe-area-inset-top, 0px)); display:flex; align-items:flex-start; justify-content:space-between; gap:12px; pointer-events:none; }
+  #left { display:flex; flex-direction:column; align-items:flex-start; gap:12px; min-width:0; }
+  #title { pointer-events:auto; cursor:pointer; background:none; border:0; padding:0; text-align:left; color:inherit; font:inherit; transform:rotate(-2deg); }
+  #title:focus-visible { outline:3px solid var(--gold); outline-offset:4px; }
+  #title .t1 { display:inline-block; white-space:nowrap; font-family:'Pirata One', 'Bangers', Impact, serif; font-size:clamp(30px, 5.4vw, 60px); letter-spacing:1px; line-height:1;
+    color:var(--gold); -webkit-text-stroke:2px var(--ink); paint-order:stroke fill; text-shadow:4px 4px 0 var(--ink);
+    padding:6px 16px 8px; background:var(--red); border:4px solid var(--ink); box-shadow:6px 6px 0 var(--ink); }
+  #panel { display:flex; flex-direction:column; gap:6px; align-items:stretch; flex:none; }
+  /* one line: speed · hull pips */
+  #log { display:flex; align-items:center; justify-content:space-between; gap:10px; font-family:'Bangers', Impact, sans-serif; letter-spacing:1px; font-size:16px;
+    background:var(--ink); color:var(--gold); border:3px solid var(--ink); box-shadow:4px 4px 0 rgba(0,0,0,.35); padding:4px 8px 4px 10px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  #log.boost #spd { color:#fff; text-shadow:0 0 6px var(--gold), 0 0 2px var(--gold); }
+  #hullBar { display:flex; gap:3px; }
+  #hullBar i { width:9px; height:13px; border:2px solid var(--gold); border-radius:2px; background:#3f9a4a; }
+  #hullBar i.lost { background:transparent; opacity:.55; }
+  #log.low #hullBar i:not(.lost) { background:var(--red); }
+  #stats { font-family:'Bangers', Impact, sans-serif; letter-spacing:1px; font-size:16px; background:var(--gold); border:3px solid var(--ink); box-shadow:4px 4px 0 var(--ink);
+    padding:3px 10px; text-align:center; font-variant-numeric:tabular-nums; }
+  /* bottom bar: zoom on the left; Map · Fire (or Dig) · Fire (or Shoot) · Anchor · Ashore in the middle; all on one centre line */
+  #bar { position:fixed; left:16px; right:16px; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); display:grid; grid-template-columns:1fr auto 1fr; align-items:center; pointer-events:none; }
+  #bar button { pointer-events:auto; }
+  #bZoom { justify-self:start; }
+  #controls { display:flex; align-items:center; gap:12px; }
+  #bar button { cursor:pointer; color:var(--ink); border:4px solid var(--ink); box-shadow:5px 5px 0 var(--ink); touch-action:manipulation; user-select:none; -webkit-user-select:none; transition:transform .08s; }
+  #bar button:active { transform:translate(3px,3px); box-shadow:2px 2px 0 var(--ink); }
+  #bar button:focus-visible { outline:3px solid var(--gold); outline-offset:3px; }
+  .ctl[aria-disabled="true"], .fire.off { opacity:.45; cursor:default; }
+  .fire.dig { background:conic-gradient(#8a5a2a calc(var(--p, 1) * 360deg), #5a3a1e 0); }
+  /* the treasure map */
+  #mapWrap { position:fixed; inset:0; z-index:7; display:grid; place-items:center; padding:12px; background:rgba(20,14,8,.45); }
+  #mapWrap[hidden] { display:none; }
+  #mapWrap .card { position:relative; background:#e9d8ae; border:4px solid var(--ink); box-shadow:8px 8px 0 var(--ink); padding:10px; transform:rotate(-0.6deg); max-width:100%; }
+  #mapCanvas { display:block; height:min(78vh, 880px); max-width:calc(100vw - 48px); object-fit:contain; cursor:crosshair; }
+  #mapWrap .hint { margin:6px 0 0; text-align:center; font-weight:700; font-size:13px; }
+  #mapClose { position:absolute; right:-14px; top:-14px; width:38px; height:38px; border:3px solid var(--ink); border-radius:50%; background:var(--gold); cursor:pointer; font-size:17px; font-weight:700; color:var(--ink); }
+  .opt { display:flex; align-items:center; gap:8px; margin:0 36px 10px 0; font-size:14px; cursor:pointer; }
+  .opt input { width:20px; height:20px; accent-color:var(--red); margin:0; }
+  .ctl { width:62px; height:62px; border-radius:14px; background:var(--paper); display:grid; place-items:center; padding:4px 0 2px;
+    font-family:'Bangers', Impact, sans-serif; font-size:13px; letter-spacing:1px; line-height:1; }
+  .ctl svg { width:28px; height:28px; }
+  .ctl.on { background:var(--gold); }
+  .fire { width:88px; height:88px; border-radius:50%; padding:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    font-family:'Pirata One', 'Bangers', serif; font-size:26px; line-height:1; color:#fff; -webkit-text-stroke:1px var(--ink); paint-order:stroke fill;
+    background:conic-gradient(var(--red) calc(var(--p, 1) * 360deg), #7a3a33 0); }
+  /* same three rows on both buttons: arrow · FIRE · side name (one line, sized for "STARBOARD") */
+  .fire .arr { font-family:'Bangers', Impact, sans-serif; font-size:14px; -webkit-text-stroke:0; }
+  .fire small { font-family:'Bangers', Impact, sans-serif; font-size:11px; letter-spacing:.5px; white-space:nowrap; -webkit-text-stroke:0; }
+  .fire[aria-disabled="true"] { cursor:progress; }
+  /* how to play: only when the logo is tapped */
+  #help { position:fixed; left:16px; top:calc(96px + env(safe-area-inset-top, 0px)); width:min(380px, calc(100vw - 32px)); z-index:6; background:var(--paper);
+    border:4px solid var(--ink); box-shadow:6px 6px 0 var(--ink); padding:12px 16px 14px; font-weight:700; font-size:14px; line-height:1.4;
+    max-height:calc(100vh - 230px - env(safe-area-inset-top, 0px)); overflow-y:auto; box-sizing:border-box; }
+  #help h2 { margin:0 28px 6px 0; font-family:'Pirata One', 'Bangers', serif; font-weight:400; font-size:26px; line-height:1.1; }
+  #help ul { margin:0; padding-left:18px; display:grid; gap:4px; }
+  #help kbd { font-family:'Comic Neue', sans-serif; font-size:12px; border:1.5px solid var(--ink); border-radius:4px; padding:0 4px; background:#fff; }
+  #voyageRow { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 36px 10px 0; padding-bottom:10px; border-bottom:2px dashed var(--ink); }
+  #voyageRow[hidden], #soloRow[hidden] { display:none; }
+  #voyageRow .code { font-family:'Bangers', sans-serif; font-size:20px; letter-spacing:3px; background:var(--gold); border:2px solid var(--ink); padding:0 8px; }
+  .pbtn { cursor:pointer; font:700 14px 'Comic Neue', sans-serif; color:var(--ink); background:#fff; border:3px solid var(--ink); border-radius:8px; box-shadow:3px 3px 0 var(--ink); padding:5px 10px; }
+  .pbtn:active { transform:translate(2px,2px); box-shadow:1px 1px 0 var(--ink); }
+  .pbtn:focus-visible { outline:3px solid var(--red); outline-offset:2px; }
+  #helpClose { position:absolute; right:8px; top:8px; width:34px; height:34px; border:3px solid var(--ink); border-radius:50%; background:var(--gold); cursor:pointer; font-size:16px; font-weight:700; line-height:1; color:var(--ink); }
+  #helpClose:focus-visible { outline:3px solid var(--red); outline-offset:2px; }
+  #compass { position:relative; flex:none; width:64px; height:64px; border-radius:50%; background:var(--paper); border:3px solid var(--ink); box-shadow:4px 4px 0 var(--ink); margin-top:10px; }
+  #compass .needle { position:absolute; inset:0; }
+  #compass .needle::before { content:''; position:absolute; left:50%; top:8px; transform:translateX(-50%); border-left:9px solid transparent; border-right:9px solid transparent; border-bottom:27px solid var(--red); }
+  #compass .needle::after { content:''; position:absolute; left:50%; bottom:8px; transform:translateX(-50%); border-left:9px solid transparent; border-right:9px solid transparent; border-top:27px solid var(--ink); }
+  #compass .wind { position:absolute; inset:0; display:none; }
+  #compass .wind::before { content:''; position:absolute; left:50%; top:12%; bottom:12%; width:3px; transform:translateX(-50%); background:#2b8fd6; border-radius:2px; }
+  #compass .wind::after { content:''; position:absolute; left:50%; top:6%; transform:translateX(-50%); border-left:7px solid transparent; border-right:7px solid transparent; border-bottom:11px solid #2b8fd6; }
+  #compass.windy .wind { display:block; }
+  #compass .wtag { position:absolute; left:50%; bottom:-14px; transform:translateX(-50%); font-family:'Bangers', sans-serif; font-size:12px; letter-spacing:.5px; white-space:nowrap;
+    background:#d4f1ff; color:#0b4f7a; border:2px solid var(--ink); padding:0 5px; line-height:1.25; }
+  #compass.storm .wtag { background:#3a3f4a; color:#fff; }
+  #compass .n { position:absolute; left:50%; top:-12px; transform:translateX(-50%); font-family:'Bangers', sans-serif; font-size:18px; background:var(--gold); border:2px solid var(--ink); padding:0 5px; }
+  #toast { pointer-events:none; transform:rotate(-1deg); font-family:'Pirata One', 'Bangers', serif; font-size:18px; line-height:1.15; letter-spacing:.5px;
+    background:var(--paper); border:3px solid var(--ink); box-shadow:4px 4px 0 var(--ink); padding:4px 12px; max-width:min(320px, 52vw); opacity:0; transition:opacity .3s; }
+  #toast.show { opacity:1; }
+  #loading { position:fixed; inset:0; display:grid; place-items:center; background:#2b8fd6; z-index:10; transition:opacity .6s; }
+  #loading .box { font-family:'Pirata One', 'Bangers', serif; font-size:38px; background:var(--paper); border:4px solid var(--ink); box-shadow:8px 8px 0 var(--ink); padding:18px 28px; transform:rotate(-2deg); text-align:center; }
+  #loading .box small { display:block; font-family:'Comic Neue', sans-serif; font-weight:700; font-size:16px; margin-top:6px; }
+  /* the harbor menu: over the map, before you set sail */
+  #lobby { position:fixed; inset:0; z-index:8; display:grid; place-items:center; padding:16px; background:rgba(20,40,60,.25); }
+  #lobby[hidden] { display:none; }
+  #lobby .card { width:min(360px, 100%); box-sizing:border-box; margin:0; background:var(--paper); border:4px solid var(--ink); box-shadow:8px 8px 0 var(--ink); padding:16px 18px 18px; transform:rotate(-1deg); display:grid; gap:12px; }
+  #lobby h2 { margin:0; font-family:'Pirata One', 'Bangers', serif; font-weight:400; font-size:34px; line-height:1; text-align:center; }
+  #lobby label { display:grid; gap:4px; font-weight:700; font-size:14px; }
+  #lobby input { font:700 18px 'Comic Neue', sans-serif; color:var(--ink); background:#fff; border:3px solid var(--ink); border-radius:8px; padding:6px 10px; min-width:0; }
+  #lobby input:focus-visible { outline:3px solid var(--gold); outline-offset:1px; }
+  #lobby .big { cursor:pointer; font-family:'Bangers', Impact, sans-serif; font-size:22px; letter-spacing:1px; color:var(--ink); border:4px solid var(--ink); border-radius:12px; box-shadow:5px 5px 0 var(--ink); padding:8px 12px; background:var(--gold); }
+  #lobby .big.red { background:var(--red); color:#fff; -webkit-text-stroke:1px var(--ink); paint-order:stroke fill; }
+  #lobby .big:active { transform:translate(3px,3px); box-shadow:2px 2px 0 var(--ink); }
+  #lobby .big:focus-visible { outline:3px solid var(--sea); outline-offset:3px; }
+  #lobby .big:disabled { opacity:.6; cursor:progress; }
+  #lobby .or { text-align:center; font-weight:700; font-size:13px; margin:-4px 0; }
+  #lobby .join { display:grid; grid-template-columns:1fr auto; gap:8px; }
+  #lobby #joinCode { text-transform:uppercase; letter-spacing:6px; font-family:'Bangers', sans-serif; font-size:22px; text-align:center; }
+  #lobby .join .big { font-size:20px; padding:6px 14px; }
+  #lobby.invite .solo-only { display:none; }
+  #lobbyMsg { margin:0; min-height:1.2em; font-weight:700; font-size:14px; color:var(--red); text-align:center; }
+  #err { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:#fff; border:4px solid var(--ink); padding:16px; display:none; z-index:20; max-width:80vw; }
+  @media (max-width:640px) { #top { gap:8px; } #log, #stats { font-size:12px; } #stats { padding:2px 6px; } #compass { width:48px; height:48px; margin-top:4px; }
+    #compass .needle::before { top:5px; border-bottom-width:18px; border-left-width:6px; border-right-width:6px; } #compass .needle::after { bottom:5px; border-top-width:18px; border-left-width:6px; border-right-width:6px; }
+    #compass .n { font-size:13px; top:-10px; } #title .t1 { font-size:21px; letter-spacing:0; padding:3px 8px 5px; border-width:3px; box-shadow:4px 4px 0 var(--ink); -webkit-text-stroke-width:1.5px; text-shadow:3px 3px 0 var(--ink); }
+    #log { gap:6px; padding:2px 5px 2px 6px; } #hullBar { gap:2px; } #hullBar i { width:6px; height:10px; border-width:1.5px; } #compass .wtag { font-size:10px; bottom:-12px; }
+    #toast { font-size:15px; max-width:44vw; } #help { top:calc(70px + env(safe-area-inset-top, 0px)); font-size:13px; }
+    #bar { left:8px; right:8px; display:flex; justify-content:center; gap:7px; } #controls { gap:7px; } .ctl { width:44px; height:44px; font-size:9.5px; letter-spacing:.5px; border-width:3px !important; box-shadow:3px 3px 0 var(--ink) !important; } .ctl svg { width:20px; height:20px; }
+    .fire { width:64px; height:64px; font-size:20px; border-width:3px !important; box-shadow:3px 3px 0 var(--ink) !important; } .fire small { font-size:8.5px; letter-spacing:0; } .fire .arr { font-size:11px; } }
+  @media (pointer:coarse) { #help .mouse { display:none; } } @media (pointer:fine) { #help .touch { display:none; } }
+  @media (prefers-reduced-motion: reduce) { #toast, #loading { transition:none; } }
+</style>
+
+<canvas id="view"></canvas>
+<div id="top">
+  <div id="left">
+    <button id="title" aria-expanded="false" aria-controls="help" aria-label="Klahompton: how to play"><span class="t1">Klahompton</span></button>
+    <div id="toast" role="status"></div>
+  </div>
+  <div id="compass" aria-hidden="true"><div class="wind" id="windArrow"></div><div class="needle" id="needle"><span class="n">N</span></div><span class="wtag" id="windTag">calm</span></div>
+  <div id="panel">
+    <div id="log"><span id="spd">Anchored</span><span id="hullBar" role="img" aria-label="Hull"></span></div>
+    <div id="stats" hidden><span id="gold">0</span> gold banked<br><span id="cargo">0</span> in the hold · <span id="carry">0</span> in hand</div>
+  </div>
+</div>
+<div id="help" hidden>
+  <button id="helpClose" aria-label="Close how to play">✕</button>
+  <div id="voyageRow" hidden><span>Voyage</span><span class="code" id="vCode"></span><button class="pbtn" id="copyLink">Copy invite link</button><button class="pbtn" id="leave">Leave voyage</button></div>
+  <div id="soloRow" hidden style="margin:0 36px 10px 0"><button class="pbtn" id="toMenu">Play with friends</button></div>
+  <label class="opt"><input type="checkbox" id="optPinch"> Pinch (and scroll wheel) to zoom</label>
+  <h2>How to play</h2>
+  <ul>
+    <li><span class="mouse">Click</span><span class="touch">Tap</span> the water to set a course, or a place name to sail there.</li>
+    <li>Drag to look around the ship; <span class="mouse">scroll</span><span class="touch">pinch</span> to zoom.</li>
+    <li>Fire a broadside out the <b>port</b> (left) or <b>starboard</b> (right) side<span class="mouse"> with <kbd>Q</kbd> / <kbd>E</kbd></span>. It reaches the nearest ship on that side.</li>
+    <li>Treasure is buried inland under a big red <b>X</b>. Open the <b>map</b><span class="mouse"> (<kbd>M</kbd>)</span> to see them all; tap the map to set a course.</li>
+    <li>Drop anchor, then tap <b>Ashore</b><span class="mouse"> (<kbd>B</kbd>)</span> to row the dinghy to the beach. Ashore, tap to walk, and <b>Dig</b> at an X. Your <b>pistol</b> fires straight ahead, ashore or from the dinghy. Only <b>Back</b> / <b>Board</b> gets you into the dinghy or aboard your ship.</li>
+    <li>A chest rides in your hands, then the dinghy, then your hold, and only counts once you bring it <b>home</b> to your hideout<span class="mouse"> (<kbd>H</kbd>)</span>. Your hideout also repairs your hull.</li>
+    <li>Ashore you have 3 hearts: cannonballs landing nearby hurt. One hit sinks a dinghy.</li>
+    <li>Hold a straight course at full speed for 5 seconds and she makes <b>2 knots more</b>.</li>
+    <li>Wind blows in patches (the blue arrow on the compass): run with it for up to 3 knots more, or fight it. Storms blow hardest.</li>
+    <li>Beware the <b>Kraken</b>, which grabs and squeezes ships, and the <b>White Whale</b>, which rams them. Cannon fire drives them off.</li>
+    <li>Sink Navy and merchant ships, then scoop up their floating coins. Navy frigates attack if they spot you ahead of their bow; sneak up from behind. Merchantmen fight back once attacked.</li>
+    <li>Ramming a ship's side with your bow hurts them far more than you; a sideswipe hurts both. Sink and your hold spills into the sea; you escape in the dinghy and row home for a fresh ship.</li>
+    <li><b>Anchor</b> stops the ship<span class="mouse"> (<kbd>Space</kbd>)</span>.</li>
+  </ul>
+</div>
+<div id="bar">
+<button id="bZoom" class="ctl" aria-label="Camera zoom: close. Tap to change"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/><path d="M8 10.5h5" id="zoomMinus"/><path d="M10.5 8v5" id="zoomPlus" style="display:none"/></svg><span id="zoomLbl">Close</span></button>
+<div id="controls">
+  <button id="bMap" class="ctl" aria-label="Treasure map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5 8.5 4l7 2.5L21 4v13.5L15.5 20l-7-2.5L3 20z"/><path d="M8.5 4v13.5M15.5 6.5V20"/><path d="m10.6 9.4 3 3m0-3-3 3" stroke="#c8352b" stroke-width="2.6"/></svg>Map</button>
+  <button id="firePort" class="fire" aria-label="Fire port broadside"><span class="arr" aria-hidden="true">◀</span>FIRE<small>PORT</small></button>
+  <button id="fireStar" class="fire" aria-label="Fire starboard broadside"><span class="arr" aria-hidden="true">▶</span>FIRE<small>STARBOARD</small></button>
+  <button id="bAnchor" class="ctl" aria-label="Drop anchor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4.8" r="2"/><path d="M12 6.8V21"/><path d="M8 10.5h8"/><path d="M4.5 14.5c.4 3.6 3.6 6.5 7.5 6.5s7.1-2.9 7.5-6.5"/><path d="m3 16 1.5-1.5L6 16"/><path d="m18 16 1.5-1.5L21 16"/></svg>Anchor</button>
+  <button id="bAshore" class="ctl" aria-label="Go ashore in the dinghy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 13h19l-2.5 5H5z"/><path d="m6 4 7 7M18 4l-7 7"/><path d="M3 21c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1"/></svg><span id="ashoreLbl">Ashore</span></button>
+</div>
+<span></span>
+</div>
+<div id="mapWrap" hidden><div class="card"><button id="mapClose" aria-label="Close the map">✕</button><canvas id="mapCanvas" aria-label="Treasure map: tap to set a course"></canvas><p class="hint">Tap the chart to set a course. X marks the spot!</p></div></div>
+<div id="lobby" hidden>
+  <form class="card" id="lobbyForm" onsubmit="return false">
+    <h2 id="lobbyTitle">Set sail!</h2>
+    <label>Captain's name <input id="capName" maxlength="20" autocomplete="nickname" placeholder="Captain"></label>
+    <button type="button" class="big red solo-only" id="goSolo">Sail solo</button>
+    <div class="or solo-only">or play with friends</div>
+    <button type="button" class="big solo-only" id="goNew">New voyage</button>
+    <div class="join"><input id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" aria-label="Voyage code"><button type="button" class="big" id="goJoin">Join</button></div>
+    <p id="lobbyMsg" role="status"></p>
+  </form>
+</div>
+<div id="loading"><div class="box">Hoisting the sails…<small id="loadmsg">charting the islands</small></div></div>
+<div id="err"></div>
+
+<script type="module" src="/src/main.js"></script>

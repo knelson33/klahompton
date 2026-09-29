@@ -1,0 +1,15 @@
+# Netlify: the game page. Netlify installs from the repo root (npm workspaces), builds the client,
+# and serves client/dist. The page finds the game server on Fly.io.
+[build]
+  command = "npm run build"
+  publish = "client/dist"
+
+[build.environment]
+  NODE_VERSION = "24"
+  VITE_SERVER_URL = "https://klahompton.fly.dev"
+
+# Vite gives built files content-hashed names, so they can be cached for a long time
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

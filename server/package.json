@@ -1,0 +1,16 @@
+{
+  "name": "@klh/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@klh/shared": "*",
+    "@colyseus/schema": "^5.0.34",
+    "@colyseus/ws-transport": "^0.18.4",
+    "colyseus": "^0.18.8"
+  }
+}
