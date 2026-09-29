@@ -2,7 +2,7 @@
 // node server/test/sail-latency.js   (SERVER_URL=https://klahompton.fly.dev for the live server)
 import { Client } from '@colyseus/sdk';
 
-const url = process.env.SERVER_URL || 'http://localhost:2567';
+const url = process.env.SERVER_URL || 'http://localhost:2568';
 const room = await new Client(url).create('voyage', { name: 'Test Captain' });
 await new Promise(r => setTimeout(r, 500));
 const me = () => room.state.ships.get(room.sessionId);

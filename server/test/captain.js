@@ -7,7 +7,7 @@ import { buildNav, nearestOpen, cellPos } from '@klh/shared/nav';
 import { chestSpot } from '@klh/shared/treasure';
 
 buildWorld(); buildNav();
-const url = process.env.SERVER_URL || 'http://localhost:2567';
+const url = process.env.SERVER_URL || 'http://localhost:2568';
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const ok = (label, pass, extra = '') => console.log(`${pass ? 'PASS' : 'FAIL'}  ${label}${extra ? ' | ' + extra : ''}`);
 const until = async (cond, secs) => { for (let k = 0; k < secs * 10 && !cond(); k++) await wait(100); return cond(); };

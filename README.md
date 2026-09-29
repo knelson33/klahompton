@@ -11,8 +11,8 @@ npm run dev
 
 That starts both halves:
 
-- **Game page:** http://localhost:5173 (opens the harbor menu: sail solo, start a voyage, or join one by code)
-- **Game server:** ws://localhost:2567
+- **Game page:** http://localhost:5174 (opens the harbor menu: sail solo, start a voyage, or join one by code)
+- **Game server:** ws://localhost:2568
 
 **Sail online:** pick **New voyage** in one tab; it gets a 4-letter code and the address becomes `?v=CODE`, the invite link. Open that link in another tab (or type the code under **Join**). Each captain launches from their own hideout. A phone on the same Wi-Fi can join using the Network address Vite prints.
 
@@ -38,8 +38,8 @@ Shortcuts that skip the menu: `?solo`, `?new&name=Anne`, `?v=CODE&name=Calico`.
 
 ## Settings
 
-- `GAME_PORT`: game server port (default 2567). Not `PORT`, because dev tools use that for the web page.
-- `VITE_SERVER_URL`: where the page finds the game server when it isn't on the same host, port 2567.
+- `GAME_PORT`: game server port (default 2568). Not `PORT`, because dev tools use that for the web page.
+- `VITE_SERVER_URL`: where the page finds the game server when it isn't on the same host, port 2568.
 
 ## Status
 

@@ -4,7 +4,7 @@ import { Client } from '@colyseus/sdk';
 import { buildWorld, findHomeSpot } from '@klh/shared/world';
 buildWorld();
 
-const url = process.env.SERVER_URL || 'http://localhost:2567';
+const url = process.env.SERVER_URL || 'http://localhost:2568';
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const a = await new Client(url).create('voyage', { name: 'Anne Bonny' }), b = await new Client(url).joinById(a.roomId, { name: 'Calico Jack' });
 const log = []; for (const [who, room] of [['A', a], ['B', b]]) for (const type of ['shot', 'impact', 'bump', 'sunk', 'respawn']) room.onMessage(type, m => { if (who === 'A') log.push({ type, ...m }); });

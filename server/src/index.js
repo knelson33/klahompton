@@ -9,7 +9,7 @@ const t0 = Date.now();
 buildWorld(); buildNav(); // the same coastline and sea lanes the browsers draw
 console.log(`Charted the islands in ${Date.now() - t0} ms`);
 
-const port = Number(process.env.GAME_PORT) || 2567; // its own variable: dev tools set PORT for the web page
+const port = Number(process.env.GAME_PORT) || 2568; // its own variable: dev tools set PORT for the web page
 const server = new Server({ transport: new WebSocketTransport() });
 server.define('voyage', VoyageRoom);
 await server.listen(port);

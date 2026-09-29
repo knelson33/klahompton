@@ -2,7 +2,7 @@
 // Run with the server up:  node server/test/two-captains.js
 import { Client, Callbacks } from '@colyseus/sdk';
 
-const url = process.env.SERVER_URL || 'http://localhost:2567';
+const url = process.env.SERVER_URL || 'http://localhost:2568';
 const a = await new Client(url).create('voyage', { name: 'Anne Bonny' });
 const b = await new Client(url).joinById(a.roomId, { name: 'Calico Jack' });
 await new Promise(r => setTimeout(r, 300));

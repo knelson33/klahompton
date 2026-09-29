@@ -5,7 +5,7 @@ import { buildWorld, findHomeSpot } from '@klh/shared/world';
 import { buildNav, nearestOpen, cellPos } from '@klh/shared/nav';
 buildWorld(); buildNav(); // to find where each captain's hideout is
 
-const url = process.env.SERVER_URL || 'http://localhost:2567';
+const url = process.env.SERVER_URL || 'http://localhost:2568';
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const ok = (label, pass, extra = '') => console.log(`${pass ? 'PASS' : 'FAIL'}  ${label}${extra ? ' | ' + extra : ''}`);
 

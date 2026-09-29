@@ -2,8 +2,8 @@
 // Every voyage is private: "new" creates one with a fresh 4-letter code, "join" finds one by its code.
 import { Client, Callbacks } from '@colyseus/sdk';
 
-// the game server runs beside the page in development (port 2567); set VITE_SERVER_URL when it lives elsewhere
-export const serverUrl = () => import.meta.env.VITE_SERVER_URL || `${location.protocol}//${location.hostname}:2567`;
+// the game server runs beside the page in development (port 2568); set VITE_SERVER_URL when it lives elsewhere
+export const serverUrl = () => import.meta.env.VITE_SERVER_URL || `${location.protocol}//${location.hostname}:2568`;
 
 export async function newVoyage(name) {
   const room = await new Client(serverUrl()).create('voyage', { name });
